@@ -1,17 +1,15 @@
-import { createContext, ReactNode, useState } from 'react'
+import { createContext, ReactNode, useReducer, useState } from 'react'
+import {
+  ActionTypes,
+  addNewProjectAction,
+  handleStopProjectAction,
+  markCurrentProjectAsFinishedAction,
+} from '../reducers/projects/actions'
+import { Project, projectsReducer } from '../reducers/projects/reducer'
 
 interface newProjectData {
   task: string
   minutesAmount: number
-}
-
-interface Project {
-  id: string
-  task: string
-  minutesAmount: number
-  startDate: Date
-  interruptedDate?: Date
-  finishedDate?: Date
 }
 
 interface ProjectContextType {
@@ -34,9 +32,14 @@ export const ProjectContext = createContext({} as ProjectContextType)
 export const ProjectContextProvider = ({
   children,
 }: ProjectsContextProviderProps) => {
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projectsState, dispatch] = useReducer(projectsReducer, {
+    projects: [],
+    activeProjectId: null,
+  })
+
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
+
+  const { projects, activeProjectId } = projectsState
 
   const activeProject = projects.find(
     (project) => project.id === activeProjectId,
@@ -44,18 +47,6 @@ export const ProjectContextProvider = ({
 
   const setSecondsPassed = (seconds: number) => {
     setAmountSecondsPassed(seconds)
-  }
-
-  const markCurrentProjectAsFinished = () => {
-    setProjects((state) =>
-      state.map((project) => {
-        if (project.id === activeProjectId) {
-          return { ...project, finishedDate: new Date() }
-        } else {
-          return project
-        }
-      }),
-    )
   }
 
   const handleAddNewProject = ({ task, minutesAmount }: newProjectData) => {
@@ -66,22 +57,16 @@ export const ProjectContextProvider = ({
       startDate: new Date(),
     }
 
-    setProjects((state) => [...state, newProject])
-    setActiveProjectId(newProject.id)
+    dispatch(addNewProjectAction(newProject))
     setAmountSecondsPassed(0)
   }
 
   const handleStopProject = () => {
-    setProjects((state) =>
-      state.map((project) => {
-        if (project.id === activeProjectId) {
-          return { ...project, interruptedDate: new Date() }
-        } else {
-          return project
-        }
-      }),
-    )
-    setActiveProjectId(null)
+    dispatch(handleStopProjectAction())
+  }
+
+  const markCurrentProjectAsFinished = () => {
+    dispatch(markCurrentProjectAsFinishedAction())
   }
 
   return (
