@@ -1,4 +1,11 @@
-import { createContext, ReactNode, useReducer, useState } from 'react'
+import { differenceInSeconds } from 'date-fns'
+import {
+  createContext,
+  ReactNode,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react'
 import {
   ActionTypes,
   addNewProjectAction,
@@ -32,18 +39,39 @@ export const ProjectContext = createContext({} as ProjectContextType)
 export const ProjectContextProvider = ({
   children,
 }: ProjectsContextProviderProps) => {
-  const [projectsState, dispatch] = useReducer(projectsReducer, {
-    projects: [],
-    activeProjectId: null,
-  })
+  const [projectsState, dispatch] = useReducer(
+    projectsReducer,
+    {
+      projects: [],
+      activeProjectId: null,
+    },
+    () => {
+      const storedStateAsJSON = localStorage.getItem(
+        '@ignite-timer-1.0.0:cycles-state',
+      )
+      if (storedStateAsJSON) {
+        return JSON.parse(storedStateAsJSON)
+      }
+    },
+  )
 
-  const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+  useEffect(() => {
+    const stateJSON = JSON.stringify(projectsState)
+
+    localStorage.setItem('@ignite-timer-1.0.0:cycles-state', stateJSON)
+  }, [projectsState])
 
   const { projects, activeProjectId } = projectsState
-
   const activeProject = projects.find(
     (project) => project.id === activeProjectId,
   )
+
+  const [amountSecondsPassed, setAmountSecondsPassed] = useState(() => {
+    if (activeProject) {
+      return differenceInSeconds(new Date(), new Date(activeProject?.startDate))
+    }
+    return 0
+  })
 
   const setSecondsPassed = (seconds: number) => {
     setAmountSecondsPassed(seconds)
